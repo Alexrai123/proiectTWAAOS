@@ -12,3 +12,4 @@ pydantic-settings
 email-validator
 httpx
 fpdf
+sphinx

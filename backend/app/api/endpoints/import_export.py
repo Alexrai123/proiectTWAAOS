@@ -34,6 +34,12 @@ from io import BytesIO
 
 @router.get("/template/group_leader", tags=["Import/Export"])
 async def template_group_leader():
+    """
+    Generate an Excel template for group leaders.
+
+    Returns:
+        StreamingResponse: Excel file for group leader import.
+    """
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "GroupLeaders"
@@ -146,6 +152,16 @@ async def import_excel(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Import data from an uploaded Excel file.
+
+    Args:
+        file (UploadFile): The uploaded Excel file.
+        db (AsyncSession): Database session dependency.
+
+    Returns:
+        dict: Import result summary.
+    """
     import zipfile
     content = await file.read()
     try:
@@ -702,6 +718,16 @@ async def export_excel(
     type: str,
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Export data as an Excel file.
+
+    Args:
+        type (str): The type of data to export (e.g., 'exams').
+        db (AsyncSession): Database session dependency.
+
+    Returns:
+        StreamingResponse: The generated Excel file.
+    """
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = type.capitalize()
@@ -772,6 +798,16 @@ async def export_pdf(
     type: str,
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Export data as a PDF file.
+
+    Args:
+        type (str): The type of data to export (e.g., 'exams').
+        db (AsyncSession): Database session dependency.
+
+    Returns:
+        StreamingResponse: The generated PDF file.
+    """
     from fpdf import FPDF
 
     from app.models.discipline import Discipline
@@ -934,4 +970,13 @@ async def export_pdf(
 async def export_ics(
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Export data as an ICS calendar file.
+
+    Args:
+        db (AsyncSession): Database session dependency.
+
+    Returns:
+        StreamingResponse: The generated ICS file.
+    """
     return Response("ICS export not implemented", media_type="text/plain")

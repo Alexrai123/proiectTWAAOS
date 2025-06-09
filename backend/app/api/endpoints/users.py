@@ -38,6 +38,15 @@ def verify_password(plain: str, hashed: str) -> bool:
 async def list_users(
     db: AsyncSession = Depends(get_db)
 ):
+    """
+    List all users in the system.
+
+    Args:
+        db (AsyncSession): Database session dependency.
+
+    Returns:
+        list[UserRead]: List of user objects.
+    """
     result = await db.execute(select(User))
     users = result.scalars().all()
     return users

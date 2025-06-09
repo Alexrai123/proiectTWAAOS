@@ -19,6 +19,15 @@ from app.models.room import Room
 
 @router.get("/", response_model=list[ExamDisplay])
 async def list_exams(db: AsyncSession = Depends(get_db)):
+    """
+    List all exams with related discipline, teacher, assistants, and room.
+
+    Args:
+        db (AsyncSession): Database session dependency.
+
+    Returns:
+        list[ExamDisplay]: List of exams with expanded information.
+    """
     # Fetch all exams with their related discipline, teacher, assistants, and room
     result = await db.execute(select(Exam))
     exams = result.scalars().all()
