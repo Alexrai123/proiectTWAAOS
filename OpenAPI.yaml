@@ -1,0 +1,646 @@
+openapi: 3.0.3
+info:
+  title: TWAAOS-SIC Exam Scheduling API
+  version: '1.0.0'
+  description: |
+    Comprehensive API for exam and colloquium planning at FIESC (USV).
+    Covers user management, authentication (OAuth2/JWT), exam scheduling, data import/export, notifications.
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development server
+tags:
+  - name: Auth
+    description: User authentication and role management
+  - name: Users
+    description: User CRUD & role-based queries
+  - name: Groups
+    description: Group management (study groups/subgroups)
+  - name: Rooms
+    description: Room/venue management
+  - name: Disciplines
+    description: Subjects/Courses management
+  - name: Exams
+    description: Exam and colloquium scheduling
+  - name: Import/Export
+    description: Excel/PDF/ICS data operations
+  - name: Notifications
+    description: Email and alert notifications
+components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://accounts.google.com/o/oauth2/auth
+          tokenUrl: https://oauth2.googleapis.com/token
+          scopes:
+            openid: OpenID Connect scope
+    JWT:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [SG, SEC, CD, ADM]
+        is_active:
+          type: boolean
+        title:
+          type: string
+          nullable: true
+      required: [id, name, email, role]
+    Group:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        year:
+          type: integer
+        specialization:
+          type: string
+        leader_id:
+          type: integer
+      required: [id, name, year, specialization]
+    Room:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        building:
+          type: string
+        capacity:
+          type: integer
+      required: [id, name, building, capacity]
+    Discipline:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        program:
+          type: string
+        year:
+          type: integer
+        group_id:
+          type: integer
+        teacher_id:
+          type: integer
+        assistant_ids:
+          type: array
+          items:
+            type: integer
+      required: [id, name, year, group_id, teacher_id]
+    Exam:
+      type: object
+      properties:
+        id:
+          type: integer
+        discipline_id:
+          type: integer
+        proposed_by:
+          type: integer
+        proposed_date:
+          type: string
+          format: date-time
+        confirmed_date:
+          type: string
+          format: date-time
+        room_id:
+          type: integer
+        status:
+          type: string
+          enum: [pending, approved, rejected, cancelled, completed]
+        professor_agreement:
+          type: boolean
+        assistant_ids:
+          type: array
+          items:
+            type: integer
+        publication_date:
+          type: string
+          format: date
+      required: [id, discipline_id, status, room_id]
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        to:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+        sent_at:
+          type: string
+          format: date-time
+      required: [to, subject, body]
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+      required: [detail]
+security:
+  - OAuth2: []
+  - JWT: []
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: User login (Google OAuth2 or Admin JWT)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Successful login, returns access token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      security:
+        - OAuth2: []
+        - JWT: []
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    post:
+      tags: [Users]
+      summary: Create a new user (Admin only)
+      security:
+        - JWT: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /users/{user_id}:
+    get:
+      tags: [Users]
+      summary: Get user details
+      security:
+        - OAuth2: []
+        - JWT: []
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags: [Users]
+      summary: Update user (Admin or self)
+      security:
+        - JWT: []
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Users]
+      summary: Delete user (Admin only)
+      security:
+        - JWT: []
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /groups:
+    get:
+      tags: [Groups]
+      summary: List all groups
+      security:
+        - OAuth2: []
+        - JWT: []
+      responses:
+        '200':
+          description: List of groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Group'
+    post:
+      tags: [Groups]
+      summary: Create new group
+      security:
+        - JWT: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Group'
+      responses:
+        '201':
+          description: Created group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /rooms:
+    get:
+      tags: [Rooms]
+      summary: List all rooms
+      security:
+        - OAuth2: []
+        - JWT: []
+      responses:
+        '200':
+          description: List of rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
+    post:
+      tags: [Rooms]
+      summary: Create new room (Admin only)
+      security:
+        - JWT: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Room'
+      responses:
+        '201':
+          description: Created room
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /disciplines:
+    get:
+      tags: [Disciplines]
+      summary: List all disciplines/courses
+      security:
+        - OAuth2: []
+        - JWT: []
+      responses:
+        '200':
+          description: List of disciplines
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Discipline'
+    post:
+      tags: [Disciplines]
+      summary: Create new discipline (Admin or Secretariat)
+      security:
+        - JWT: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Discipline'
+      responses:
+        '201':
+          description: Created discipline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Discipline'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /exams:
+    get:
+      tags: [Exams]
+      summary: List exams
+      security:
+        - OAuth2: []
+        - JWT: []
+      parameters:
+        - in: query
+          name: group_id
+          schema:
+            type: integer
+        - in: query
+          name: discipline_id
+          schema:
+            type: integer
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, approved, rejected, cancelled, completed]
+      responses:
+        '200':
+          description: List of exams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Exam'
+    post:
+      tags: [Exams]
+      summary: Propose a new exam (Group Leader)
+      security:
+        - OAuth2: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Exam'
+      responses:
+        '201':
+          description: Created exam
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exam'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /exams/{exam_id}/validate:
+    put:
+      tags: [Exams]
+      summary: Validate/Approve/Reject proposed exam (Teacher)
+      security:
+        - OAuth2: []
+      parameters:
+        - in: path
+          name: exam_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [approved, rejected]
+                reason:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Validation updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exam'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Exam not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /import/excel:
+    post:
+      tags: [Import/Export]
+      summary: Import exam/group/discipline data via Excel (SEC/ADM only)
+      security:
+        - JWT: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Data imported successfully
+        '400':
+          description: Invalid file/format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /export/excel:
+    get:
+      tags: [Import/Export]
+      summary: Export current data as Excel (per filter)
+      security:
+        - OAuth2: []
+        - JWT: []
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [exams, users, groups, rooms, disciplines]
+      responses:
+        '200':
+          description: Download Excel file
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+  /export/pdf:
+    get:
+      tags: [Import/Export]
+      summary: Export current schedule as PDF
+      security:
+        - OAuth2: []
+        - JWT: []
+      responses:
+        '200':
+          description: Download PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+  /export/ics:
+    get:
+      tags: [Import/Export]
+      summary: Export current exam schedule as calendar (.ics)
+      security:
+        - OAuth2: []
+        - JWT: []
+      responses:
+        '200':
+          description: Download ICS file
+          content:
+            text/calendar:
+              schema:
+                type: string
+                format: binary
+  /notifications:
+    post:
+      tags: [Notifications]
+      summary: Send notification (email/push)
+      security:
+        - JWT: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Notification'
+      responses:
+        '201':
+          description: Notification sent/logged
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      tags: [Notifications]
+      summary: List sent notifications
+      security:
+        - JWT: []
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
