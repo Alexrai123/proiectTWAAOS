@@ -14,9 +14,7 @@ export default function GroupLeaders() {
 
 
   useEffect(() => {
-    fetch(`${API_BASE}/users/`, {
-      headers: { Authorization: `Bearer ${user.token}` },
-    })
+    fetch(`${API_BASE}/users/`)
       .then((res) => res.json())
       .then((data) => {
         setLeaders(Array.isArray(data) ? data.filter(u => u.role === 'SG') : []);
@@ -26,7 +24,7 @@ export default function GroupLeaders() {
         setErr("Failed to load group leaders");
         setLoading(false);
       });
-  }, [user.token]);
+  }, []);
 
   async function handleImport(e) {
     e.preventDefault();

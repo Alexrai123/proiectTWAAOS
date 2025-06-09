@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { API_BASE } from "../App";
 import { jwtDecode } from "jwt-decode";
-import { DataGrid } from '@mui/x-data-grid';
+import Button from '@mui/material/Button';
+
 
 function getUserFromToken() {
   const token = localStorage.getItem("token");
@@ -21,6 +22,7 @@ function ExamApprovalList() {
   const [err, setErr] = useState("");
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [selectedExamId, setSelectedExamId] = useState(null);
 
   useEffect(() => {
     const u = getUserFromToken();
@@ -28,6 +30,7 @@ function ExamApprovalList() {
     fetch(`${API_BASE}/exams/`)
       .then((res) => res.json())
       .then((data) => {
+        console.log("Fetched exams data:", data); // DEBUG: See raw backend data
         // Only show exams for this teacher
         const filtered = Array.isArray(data)
           ? data.filter((e) => e.teacher_id === u.sub || e.teacher_id === u.id)
@@ -44,10 +47,9 @@ function ExamApprovalList() {
   async function handleApprove(id) {
     setMsg(""); setErr("");
     try {
-      const res = await fetch(`${API_BASE}/exams/${id}`, {
-        method: "PATCH",
+      const res = await fetch(`${API_BASE}/exams/${id}/approve`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "approved" }),
       });
       if (!res.ok) throw new Error("Failed to approve exam");
       const updated = await res.json();
@@ -59,12 +61,12 @@ function ExamApprovalList() {
   }
 
   async function handleReject(id) {
+  console.log("handleReject called with id:", id);
     setMsg(""); setErr("");
     try {
-      const res = await fetch(`${API_BASE}/exams/${id}`, {
-        method: "PATCH",
+      const res = await fetch(`${API_BASE}/exams/${id}/reject`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "rejected", rejection_reason: rejectReason }),
       });
       if (!res.ok) throw new Error("Failed to reject exam");
       const updated = await res.json();
@@ -77,47 +79,7 @@ function ExamApprovalList() {
     }
   }
 
-  const columns = [
-    { field: 'group_name', headerName: 'Group', width: 120 },
-    { field: 'specialization', headerName: 'Specialization', width: 160 },
-    { field: 'discipline_name', headerName: 'Discipline', width: 180 },
-    { field: 'proposed_date', headerName: 'Proposed Date', width: 170 },
-    { field: 'confirmed_date', headerName: 'Confirmed Date', width: 170 },
-    { field: 'room_name', headerName: 'Room', width: 120 },
-    { field: 'status', headerName: 'Status', width: 120 },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 220,
-      sortable: false,
-      filterable: false,
-      renderCell: (params) => {
-        if (params.row.status === "pending") {
-          return (
-            <>
-              <button onClick={() => handleApprove(params.row.id)} style={{ marginRight: 8, color: '#006400' }}>Approve</button>
-              <button onClick={() => setRejectingId(params.row.id)} style={{ color: '#b30000' }}>Reject</button>
-              {rejectingId === params.row.id && (
-                <div style={{ marginTop: 8 }}>
-                  <input
-                    type="text"
-                    placeholder="Rejection reason"
-                    value={rejectReason}
-                    onChange={e => setRejectReason(e.target.value)}
-                    style={{ marginRight: 8 }}
-                  />
-                  <button onClick={() => handleReject(params.row.id)} style={{ color: '#b30000' }}>Confirm Reject</button>
-                  <button onClick={() => { setRejectingId(null); setRejectReason(""); }} style={{ marginLeft: 4 }}>Cancel</button>
-                </div>
-              )}
-            </>
-          );
-        } else {
-          return <span style={{ color: '#888' }}>No actions</span>;
-        }
-      }
-    }
-  ];
+
 
   const rows = exams.map((e) => ({
     ...e,
@@ -125,8 +87,8 @@ function ExamApprovalList() {
     group_name: e.group_name || '-',
     specialization: e.specialization || '-',
     discipline_name: e.discipline_name || '-',
-    proposed_date: e.proposed_date || '-',
-    confirmed_date: e.confirmed_date || '-',
+    proposed_date: e.proposed_date,
+    confirmed_date: e.confirmed_date,
     room_name: e.room_name || '-',
     status: e.status || '-',
   }));
@@ -135,12 +97,120 @@ function ExamApprovalList() {
   if (!user) return <div>Please log in.</div>;
 
   return (
-    <div style={{ maxWidth: 1100, margin: 'auto', marginTop: 32 }}>
-      <h2>Exam Approval (Teacher)</h2>
-      {msg && <div style={{ color: 'green' }}>{msg}</div>}
-      {err && <div style={{ color: 'red' }}>{err}</div>}
-      <div style={{ height: 600, width: '100%' }}>
-        <DataGrid rows={rows} columns={columns} pageSize={12} />
+    <div>
+      <div style={{ maxWidth: 1400, margin: 'auto', marginTop: 32 }}>
+        <h2>Exam Approval (Teacher)</h2>
+        {msg && <div style={{ color: 'green' }}>{msg}</div>}
+        {err && <div style={{ color: 'red' }}>{err}</div>}
+
+        <div style={{ position: 'relative', zIndex: 10, background: '#fff', padding: 16, marginBottom: 16, borderRadius: 8, boxShadow: '0 2px 8px #0001', display: 'block' }}>
+          <button
+          disabled={
+            loading ||
+            !selectedExamId ||
+            !rows.find(e => e.id === selectedExamId && e.status === 'pending') ||
+            rejectingId !== null
+          }
+          style={{
+            background: '#1e7e34', color: '#fff', fontWeight: 'bold', border: 'none', borderRadius: 4, padding: '10px 24px', marginRight: 16, minWidth: 180, cursor: 'pointer', fontSize: 16, opacity: (loading || !selectedExamId || !rows.find(e => e.id === selectedExamId && e.status === 'pending') || rejectingId !== null) ? 0.5 : 1
+          }}
+          onClick={() => handleApprove(selectedExamId)}
+        >
+          Approve Selected Exam
+        </button>
+        <button
+          disabled={
+            loading ||
+            !selectedExamId ||
+            !rows.find(e => e.id === selectedExamId && e.status === 'pending') ||
+            rejectingId !== null
+          }
+          style={{
+            background: '#b30000', color: '#fff', fontWeight: 'bold', border: 'none', borderRadius: 4, padding: '10px 24px', marginRight: 16, minWidth: 180, cursor: 'pointer', fontSize: 16, opacity: (loading || !selectedExamId || !rows.find(e => e.id === selectedExamId && e.status === 'pending') || rejectingId !== null) ? 0.5 : 1
+          }}
+          onClick={() => setRejectingId(selectedExamId)}
+        >
+          Reject Selected Exam
+        </button>
+          {rejectingId && (
+            <>
+              <input
+                type="text"
+                placeholder="Rejection reason"
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                style={{ marginRight: 8 }}
+                autoFocus
+              />
+              <button
+              disabled={loading}
+              style={{
+                background: '#b30000', color: '#fff', fontWeight: 'bold', border: 'none', borderRadius: 4, padding: '10px 24px', marginRight: 8, minWidth: 150, cursor: 'pointer', fontSize: 16, opacity: loading ? 0.5 : 1
+              }}
+              onClick={() => handleReject(rejectingId)}
+            >
+              Confirm Reject
+            </button>
+            <button
+              disabled={loading}
+              style={{
+                background: '#eee', color: '#333', fontWeight: 'bold', border: '1px solid #ccc', borderRadius: 4, padding: '10px 24px', marginLeft: 8, minWidth: 120, cursor: 'pointer', fontSize: 16, opacity: loading ? 0.5 : 1
+              }}
+              onClick={() => { setRejectingId(null); setRejectReason(""); }}
+            >
+              Cancel
+            </button>
+            </>
+          )}
+        </div>
+        <div style={{ overflowX: 'auto', marginTop: 24 }}>
+          <table border={1} cellPadding={6} style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ background: '#f0f0f0' }}>
+              <tr>
+                <th>Group</th>
+                <th>Specialization</th>
+                <th>Discipline</th>
+                <th>Proposed Date (by SG)</th>
+                <th>Confirmed Date (by CD)</th>
+                <th>Room</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(row => (
+                <tr
+                  key={row.id}
+                  style={{
+                    background:
+                      selectedExamId === row.id
+                        ? '#e0f7fa'
+                        : row.status === 'rejected'
+                          ? '#ffe6e6'
+                          : row.status === 'approved'
+                            ? '#e6ffe6'
+                            : undefined,
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    setSelectedExamId(row.id);
+                    setRejectingId(null);
+                    setRejectReason("");
+                  }}
+                >
+                  <td>{row.group_name}</td>
+                  <td>{row.specialization}</td>
+                  <td>{row.discipline_name}</td>
+                  <td>{row.proposed_date ? row.proposed_date.replace('T', ' ').slice(0, 16) : '-'}</td>
+                  <td>{row.confirmed_date ? row.confirmed_date.replace('T', ' ').slice(0, 16) : '-'}</td>
+                  <td>{row.room_name}</td>
+                  <td>{row.status}</td>
+                  <td></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

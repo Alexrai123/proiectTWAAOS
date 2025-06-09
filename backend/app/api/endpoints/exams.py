@@ -183,18 +183,12 @@ async def update_exam(
 @router.post("/{exam_id}/approve", response_model=ExamRead)
 async def approve_exam(
     exam_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_role(["CD", "SEC", "ADM"]))
+    db: AsyncSession = Depends(get_db)
 ):
     db_item = await db.get(Exam, exam_id)
     if not db_item:
         raise HTTPException(404, "Exam not found")
-    # CD: Only if assigned as teacher
-    if current_user.role == "CD" and db_item.teacher_id != current_user.id:
-        raise HTTPException(403, "Not authorized to approve this exam")
     db_item.status = "approved"
-    from datetime import datetime
-    db_item.confirmed_date = datetime.now().isoformat()
     await db.commit()
     await db.refresh(db_item)
     return db_item
@@ -202,15 +196,11 @@ async def approve_exam(
 @router.post("/{exam_id}/reject", response_model=ExamRead)
 async def reject_exam(
     exam_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_role(["CD", "SEC", "ADM"]))
+    db: AsyncSession = Depends(get_db)
 ):
     db_item = await db.get(Exam, exam_id)
     if not db_item:
         raise HTTPException(404, "Exam not found")
-    # CD: Only if assigned as teacher
-    if current_user.role == "CD" and db_item.teacher_id != current_user.id:
-        raise HTTPException(403, "Not authorized to reject this exam")
     db_item.status = "rejected"
     await db.commit()
     await db.refresh(db_item)

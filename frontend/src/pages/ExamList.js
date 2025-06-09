@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { API_BASE } from "../App";
-import { DataGrid } from '@mui/x-data-grid';
+
 
 function ExamList() {
   const [rooms, setRooms] = useState([]);
   console.log('ExamList mounted');
   const [exams, setExams] = useState([]);
-  const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -17,17 +16,7 @@ function ExamList() {
 
   useEffect(() => {
     console.log('useEffect ran');
-    const email = localStorage.getItem('email');
-    setUser(email);
-    if (email) {
-      if (email === 'admin@usv.ro') setRole('ADM');
-      else if (email === 'secretary@usv.ro') setRole('SEC');
-      else if (email === 'cd@usv.ro') setRole('CD');
-      else if (email === 'sg@usv.ro') setRole('SG');
-      else setRole('UNKNOWN');
-    } else {
-      setRole('UNKNOWN');
-    }
+
     fetch(`${API_BASE}/exams/`)
       .then((res) => res.json())
       .then((data) => {
@@ -54,86 +43,6 @@ function ExamList() {
   const [editForm, setEditForm] = useState({});
   const [editMsg, setEditMsg] = useState("");
   const [editErr, setEditErr] = useState("");
-  // Approve/Reject state for CD
-  const [rejectingId, setRejectingId] = useState(null);
-  const [rejectReason, setRejectReason] = useState("");
-
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <div>Please log in.</div>;
-  if (role === 'UNKNOWN') return <div style={{color:'red'}}>Could not determine your role. Please log out and log in again with a known email.</div>;
-  // Role-based filtering
-  let visibleExams = exams;
-  if (role === "SG") {
-    visibleExams = exams.filter((e) => e.group_name === user.group_name);
-  } else if (role === "CD") {
-    visibleExams = exams.filter((e) => e.teacher_id === user.sub || e.teacher_id === user.id);
-  }
-  console.log('Visible exams:', visibleExams);
-
-  // DataGrid columns
-  const columns = [
-    { field: 'group_name', headerName: 'Group', width: 120 },
-    { field: 'specialization', headerName: 'Specialization', width: 160 },
-    { field: 'discipline_name', headerName: 'Discipline', width: 180 },
-    { field: 'proposed_date', headerName: 'Proposed Date', width: 170 },
-    { field: 'confirmed_date', headerName: 'Confirmed Date', width: 170 },
-    { field: 'room_name', headerName: 'Room', width: 120 },
-    { field: 'status', headerName: 'Status', width: 120 },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 220,
-      sortable: false,
-      filterable: false,
-      renderCell: (params) => {
-        // CD (teacher): Only Approve/Reject for pending exams
-        if (role === 'CD' && (params.row.teacher_id === user.sub || params.row.teacher_id === user.id)) {
-          if (params.row.status === 'pending') {
-            return (
-              <>
-                <button onClick={() => handleApprove(params.row.id)} style={{ marginRight: 8, color: '#006400' }}>Approve</button>
-                <button onClick={() => setRejectingId(params.row.id)} style={{ color: '#b30000' }}>Reject</button>
-                {rejectingId === params.row.id && (
-                  <div style={{ marginTop: 8 }}>
-                    <input
-                      type="text"
-                      placeholder="Rejection reason"
-                      value={rejectReason}
-                      onChange={e => setRejectReason(e.target.value)}
-                      style={{ marginRight: 8 }}
-                    />
-                    <button onClick={() => handleReject(params.row.id)} style={{ color: '#b30000' }}>Confirm Reject</button>
-                    <button onClick={() => { setRejectingId(null); setRejectReason(""); }} style={{ marginLeft: 4 }}>Cancel</button>
-                  </div>
-                )}
-              </>
-            );
-          } else {
-            return <span style={{ color: '#888' }}>No actions</span>;
-          }
-        }
-        // SEC/ADM: Edit/Delete
-        if (role === 'SEC' || role === 'ADM') {
-          return (
-            <>
-              <button onClick={() => handleEdit(params.row.id)} style={{ marginRight: 8 }}>Edit</button>
-              <button onClick={() => handleDelete(params.row.id)} style={{ color: '#b30000' }}>Delete</button>
-            </>
-          );
-        }
-        // SG: existing logic
-        if (role === 'SG' && params.row.group_name === user.group_name) {
-          return (
-            <>
-              <button onClick={() => handleEdit(params.row.id)} style={{ marginRight: 8 }}>Edit</button>
-              <button onClick={() => handleDelete(params.row.id)} style={{ color: '#b30000' }}>Delete</button>
-            </>
-          );
-        }
-        return null;
-      }
-    }
-  ];
 
   async function openEditModal(exam) {
     // Fetch the full exam object from backend to get discipline_id
@@ -218,44 +127,8 @@ function ExamList() {
     }
   }
 
-  async function handleApprove(id) {
-    setMsg(""); setErr("");
-    try {
-      const res = await fetch(`${API_BASE}/exams/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "approved" }),
-      });
-      if (!res.ok) throw new Error("Failed to approve exam");
-      const updated = await res.json();
-      setExams(exams => exams.map(e => e.id === updated.id ? { ...e, ...updated } : e));
-      setMsg("Exam approved.");
-    } catch (e) {
-      setErr(e.message);
-    }
-  }
-
-  async function handleReject(id) {
-    setMsg(""); setErr("");
-    try {
-      const res = await fetch(`${API_BASE}/exams/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "rejected", rejection_reason: rejectReason }),
-      });
-      if (!res.ok) throw new Error("Failed to reject exam");
-      const updated = await res.json();
-      setExams(exams => exams.map(e => e.id === updated.id ? { ...e, ...updated } : e));
-      setMsg("Exam rejected.");
-      setRejectingId(null);
-      setRejectReason("");
-    } catch (e) {
-      setErr(e.message);
-    }
-  }
-
   // DataGrid rows
-  const rows = visibleExams.map((e) => ({
+  const rows = exams.map((e) => ({
     ...e,
     id: e.id,
     group_name: e.group_name || '-',
@@ -268,12 +141,14 @@ function ExamList() {
   }));
 
   // Export handlers (no auth)
+  const token = localStorage.getItem("token");
   const handleExcelExport = () => {
-    window.open(`${API_BASE}/import_export/export/excel?type=exams`, '_blank');
+    window.open(`${API_BASE}/import_export/export/excel?type=exams&token=${token}`, '_blank');
   };
   const handlePDFExport = () => {
-    window.open(`${API_BASE}/import_export/export/pdf?type=exams`, '_blank');
+    window.open(`${API_BASE}/import_export/export/pdf?type=exams&token=${token}`, '_blank');
   };
+
 
   async function handleImport(e) {
     e.preventDefault();
@@ -337,21 +212,15 @@ function ExamList() {
           <a href={`${API_BASE}/import_export/template/exam`} download style={{ textDecoration: 'none' }}>
   <button type="button" style={{ padding: '6px 12px', background: '#009e3d', color: 'white' }}>Download Exam Template</button>
 </a>
-          {role === 'CD' && (
-            <button type="button" style={{ padding: '6px 12px', background: '#1976d2', color: 'white', marginLeft: 8 }} onClick={() => window.location = '/exams/approval'}>
-              Go to Exam Approval
-            </button>
-          )}
+          
         </div>
-        {(role === 'SEC' || role === 'ADM') && (
-          <form onSubmit={handleImport} style={{ marginBottom: 8 }}>
-            <label>
-              Import Excel (.xlsx):
-              <input type="file" accept=".xlsx" ref={fileInput} required />
-            </label>
-            <button type="submit">Upload</button>
-          </form>
-        )}
+        <form onSubmit={handleImport} style={{ marginBottom: 8 }}>
+  <label>
+    Import Excel (.xlsx):
+    <input type="file" accept=".xlsx" ref={fileInput} required />
+  </label>
+  <button type="submit">Upload</button>
+</form>
         {importResult && (
           <div style={{ color: 'green' }}>
             <strong>Import Success:</strong>
@@ -364,12 +233,10 @@ function ExamList() {
           </div>
         )}
       </div>
-      {(role === "SEC" || role === "ADM") && (
-        <>
-          <button onClick={() => window.location = "/import"}>Import</button>
-          <button onClick={() => window.location = "/export"}>Export</button>
-        </>
-      )}
+      <>
+  <button onClick={() => window.location = "/import"}>Import</button>
+  <button onClick={() => window.location = "/export"}>Export</button>
+</>
       {msg && <div style={{ color: 'green', marginBottom: 8 }}>{msg}</div>}
       {err && <div style={{ color: 'red', marginBottom: 8 }}>{err}</div>}
       <div style={{ height: 600, width: '100%' }}>

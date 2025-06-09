@@ -9,7 +9,7 @@ export default function ImportExport() {
   const [importResult, setImportResult] = useState(null);
   const [importError, setImportError] = useState(null);
   const [exportType, setExportType] = useState("exams");
-  const [exportFormat, setExportFormat] = useState("excel");
+  
   const [downloading, setDownloading] = useState(false);
 
   // Import Excel handler
@@ -42,12 +42,10 @@ async function handleImport(e) {
   async function handleExport(e, format) {
     e.preventDefault();
     setDownloading(true);
-    let url = `${API_BASE}/export/${format}`;
-    if (format === "excel" || format === "pdf") url += `?type=${exportType}`;
+    const token = user?.token || localStorage.getItem("token");
+    let url = `${API_BASE}/import_export/export/${format}?type=${exportType}&token=${token}`;
     try {
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${user.token}` },
-      });
+      const res = await fetch(url);
       if (res.status === 403) throw new Error("You do not have permission to export this data.");
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();

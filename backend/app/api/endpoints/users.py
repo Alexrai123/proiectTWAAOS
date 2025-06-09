@@ -36,8 +36,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 @router.get("/", response_model=list[UserRead])
 async def list_users(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["ADM"]))
+    db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(User))
     users = result.scalars().all()

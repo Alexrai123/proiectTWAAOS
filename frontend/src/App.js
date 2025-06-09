@@ -1,3 +1,11 @@
+import ExamListCD from "./pages/ExamListCD";
+import ExamListSG from "./pages/ExamListSG";
+import ExamListSEC from "./pages/ExamListSEC";
+import DashboardCD from "./pages/DashboardCD";
+import DashboardSG from "./pages/DashboardSG";
+import DashboardSEC from "./pages/DashboardSEC";
+import DashboardADM from "./pages/DashboardADM";
+
 import React, { useState, useEffect, createContext, useContext } from "react";
 import { Routes, Route, Link, useNavigate, Navigate, useLocation } from "react-router-dom";
 import { TextField, Button, Paper, Box, Typography, Alert, Grid, Card, CardContent, CardActions } from "@mui/material";
@@ -13,10 +21,31 @@ import IconButton from '@mui/material/IconButton';
 import HomeIcon from '@mui/icons-material/Home';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import ImportExportIcon from '@mui/icons-material/ImportExport';
-
 import IntegrationInstructionsIcon from '@mui/icons-material/IntegrationInstructions';
 import LogoutIcon from '@mui/icons-material/Logout';
 import Tooltip from '@mui/material/Tooltip';
+
+// Custom role-based dashboard redirect
+function RoleDashboardRedirect() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  React.useEffect(() => {
+    if (!user) {
+      navigate('/login', { replace: true });
+    } else if (user.role === 'CD') {
+      navigate('/dashboard-cd', { replace: true });
+    } else if (user.role === 'SG') {
+      navigate('/dashboard-sg', { replace: true });
+    } else if (user.role === 'SEC') {
+      navigate('/dashboard-sec', { replace: true });
+    } else if (user.role === 'ADM') {
+      navigate('/dashboard-adm', { replace: true });
+    } else {
+      navigate('/login', { replace: true });
+    }
+  }, [user, navigate]);
+  return <div>Redirecting...</div>;
+}
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -56,7 +85,11 @@ function AuthProvider({ children }) {
       const mappedUser = { ...data, role, token };
       setUser(mappedUser);
       localStorage.setItem("twaaos_user", JSON.stringify(mappedUser));
-      navigate("/");
+      if (mappedUser.role === "ADM") {
+        navigate("/dashboard-adm");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError(err.message);
     }
@@ -79,7 +112,11 @@ function AuthProvider({ children }) {
       const mappedUser = { ...data, email, role, token };
       setUser(mappedUser);
       localStorage.setItem("twaaos_user", JSON.stringify(mappedUser));
-      navigate("/");
+      if (mappedUser.role === "ADM") {
+        navigate("/dashboard-adm");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError(err.message);
     }
@@ -429,15 +466,23 @@ function App() {
       <NavBar />
       <React.Suspense fallback={<div>Loading...</div>}>
         <Routes>
-          <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
-          <Route path="/exams" element={<RequireAuth><ExamList /></RequireAuth>} />
+          <Route path="/" element={<RequireAuth><RoleDashboardRedirect /></RequireAuth>} />
+          <Route path="/exams" element={<RequireAuth roles={["ADM"]}><ExamList /></RequireAuth>} />
+<Route path="/all-exams" element={<RequireAuth roles={["ADM", "SEC"]}><ExamList /></RequireAuth>} />
+<Route path="/exams-cd" element={<RequireAuth><ExamListCD /></RequireAuth>} />
+<Route path="/exams-sg" element={<RequireAuth><ExamListSG /></RequireAuth>} />
+<Route path="/exams-sec" element={<RequireAuth><ExamListSEC /></RequireAuth>} />
+<Route path="/dashboard-cd" element={<RequireAuth><DashboardCD /></RequireAuth>} />
+<Route path="/dashboard-sg" element={<RequireAuth><DashboardSG /></RequireAuth>} />
+<Route path="/dashboard-sec" element={<RequireAuth><DashboardSEC /></RequireAuth>} />
+<Route path="/dashboard-adm" element={<RequireAuth roles={["ADM"]}><DashboardADM /></RequireAuth>} />
           <Route path="/exams/approval" element={<RequireAuth roles={["CD"]}><ExamApprovalList /></RequireAuth>} />
           <Route path="/exams/:id/edit" element={<RequireAuth><ExamEdit /></RequireAuth>} />
           <Route path="/import" element={<RequireAuth><ExamImport /></RequireAuth>} />
           <Route path="/export" element={<RequireAuth roles={["SEC", "ADM"]}><ExamExport /></RequireAuth>} />
-          <Route path="/import-export" element={<RequireAuth roles={["SEC", "ADM"]}><ImportExport /></RequireAuth>} />
-          <Route path="/users" element={<RequireAuth roles={["SEC", "ADM"]}><Users /></RequireAuth>} />
-          <Route path="/groupLeaders" element={<RequireAuth roles={["SEC", "ADM"]}><GroupLeaders /></RequireAuth>} />
+          <Route path="/import-export" element={<RequireAuth roles={["SEC", "ADM", "SG"]}><ImportExport /></RequireAuth>} />
+          <Route path="/users" element={<RequireAuth><Users /></RequireAuth>} />
+          <Route path="/groupLeaders" element={<RequireAuth><GroupLeaders /></RequireAuth>} />
           <Route path="/disciplines" element={<RequireAuth roles={["SEC", "ADM"]}><Disciplines /></RequireAuth>} />
 
 
