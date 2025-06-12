@@ -1,0 +1,67 @@
+🔹 Role: Secretariat (SEC)
+Authenticate via "Sign In With Google" using institutional email.
+
+Download Excel template files from the app interface. [DONE]
+
+Generate the list of courses (exams/colloquia) and corresponding instructors from the Timetable app via API. [PARTIAL]
+
+Upload the list of group leaders (name and institutional student email). [DONE]
+
+Generate the list of available examination rooms (from the Timetable app). [PARTIAL]
+
+Configure allowed time periods for exams and colloquia.
+
+Notify group leaders by email about newly uploaded data. [DONE]
+
+Check the completion status of exam data (highlighting pending fields). [DONE]
+
+Manually modify exam dates, locations, or assigned personnel if needed. [DONE]
+
+Export the exam schedule in both Excel and PDF formats. [DONE]
+
+🔹 Role: Group Leader (SG)
+Authenticate via "Sign In With Google" using institutional student email. [DONE]
+
+Receive an email notification when the course list becomes available.
+
+Fill in the proposed exam/colloquium dates for each subject.
+
+Submit the proposed dates for instructor validation.
+
+Receive email notification if a date is rejected.
+
+Re-submit a new proposed date after rejection.
+
+View official approval of the date—no further editing allowed after acceptance.
+
+🔹 Role: Instructor (CD)
+Authenticate via "Sign In With Google" using institutional email.
+
+Receive email notifications for proposed exam/colloquium dates requiring approval.
+
+View subjects with proposed exam dates submitted by group leaders.
+
+Reject proposed dates (an automatic email is sent to the group leader).
+
+Accept proposed dates and set exam room(s), assistant(s), and time slot(s) (1-hour increments).
+
+Ensure no overlap in room/time slot/assistant or instructor assignments.
+
+Access a list of assigned exams for the courses they are involved in.
+
+🔹 Role: Administrator (ADM)
+Authenticate using username and password.
+
+Update administrator access credentials.
+
+Edit faculty-specific information:
+
+Full name and short name of faculty.
+
+List of instructors and their institutional emails (@usm.ro).
+
+Add new users with SEC operator role:
+
+Full name, title (e.g., eng./ec.), and institutional email.
+
+Ensure that faculty data (personnel, structure) is retained after system reset.

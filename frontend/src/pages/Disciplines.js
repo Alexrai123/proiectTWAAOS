@@ -66,8 +66,15 @@ export default function Disciplines() {
       <h2>Management of Disciplines</h2>
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
         <a href={`${API_BASE}/import_export/template/discipline`} download>
-          <button style={{ minWidth: 320, padding: '10px 0' }}>Download Discipline Excel Template</button>
+          <button style={{ minWidth: 320, padding: '10px 0', marginRight: 12 }}>Download Discipline Excel Template</button>
         </a>
+        <button style={{ minWidth: 320, padding: '10px 0' }}
+          onClick={() => {
+            const token = user?.token || localStorage.getItem("token");
+            window.open(`${API_BASE}/import_export/export/excel?type=disciplines&token=${token}`, '_blank');
+          }}>
+          Download Disciplines in Excel
+        </button>
       </div>
       <form onSubmit={handleImport} style={{ marginBottom: 24 }}>
         <label>
