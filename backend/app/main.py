@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.endpoints import users, auth, disciplines, rooms, exams, import_export
+from app.api.endpoints import users, auth, disciplines, rooms, exams, import_export, notification
 
 from fastapi.responses import JSONResponse
 from fastapi.requests import Request
@@ -37,6 +37,7 @@ app.include_router(disciplines.router)
 app.include_router(rooms.router)
 app.include_router(exams.router)
 app.include_router(import_export.router)
+app.include_router(notification.router)
 
 @app.get("/ping")
 def ping():

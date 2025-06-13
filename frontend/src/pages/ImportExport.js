@@ -62,16 +62,14 @@ async function handleImport(e) {
   return (
     <div>
       <h2>Import/Export</h2>
-      {/* Import: SEC/ADM only */}
-      {(user.role === "SEC" || user.role === "ADM") && (
-        <form onSubmit={handleImport} style={{ marginBottom: 24 }}>
-          <label>
-            Import Excel (.xlsx):
-            <input type="file" accept=".xlsx" ref={fileInput} required />
-          </label>
-          <button type="submit">Upload</button>
-        </form>
-      )}
+      {/* Import: All roles */}
+      <form onSubmit={handleImport} style={{ marginBottom: 24 }}>
+        <label>
+          Import Excel (.xlsx):
+          <input type="file" accept=".xlsx" ref={fileInput} required />
+        </label>
+        <button type="submit">Upload</button>
+      </form>
       {importResult && (
         <div style={{ color: "green" }}>
           <strong>Import Success:</strong>

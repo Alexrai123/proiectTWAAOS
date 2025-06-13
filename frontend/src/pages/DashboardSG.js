@@ -1,14 +1,42 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../App";
 import { Button } from "@mui/material";
 import { API_BASE } from "../App";
 import { useNavigate } from "react-router-dom";
+import NotificationBanner from "../components/NotificationBanner";
 
 export default function DashboardSG() {
+  const { user } = useAuth();
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showExams, setShowExams] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
+
+  // Fetch unseen notifications for this user (SG) on mount
+  useEffect(() => {
+    if (!user || !user.email) return;
+    fetchNotifications(user.email);
+  }, [user]);
+
+  function fetchNotifications(userEmail) {
+    fetch(`${API_BASE}/notifications/unseen?user_email=${encodeURIComponent(userEmail)}`)
+      .then(res => res.json())
+      .then(data => {
+        setNotifications(Array.isArray(data) ? data : []);
+      });
+  }
+
+  function handleMarkNotificationsRead() {
+    if (!user || !user.email) return;
+    fetch(`${API_BASE}/notifications/mark_read`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_email: user.email })
+    })
+      .then(() => setNotifications([]));
+  }
 
   async function handleFetchExams() {
     setLoading(true);
@@ -29,6 +57,7 @@ export default function DashboardSG() {
 
   return (
     <div style={{ maxWidth: 900, margin: 'auto', marginTop: 32 }}>
+      <NotificationBanner notifications={notifications} onMarkRead={handleMarkNotificationsRead} />
       <h2>Dashboard - Group Leader</h2>
       <Button variant="contained" onClick={handleFetchExams} style={{ marginRight: 16 }}>
         View Group Exams

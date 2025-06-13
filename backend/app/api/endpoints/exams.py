@@ -200,6 +200,16 @@ async def approve_exam(
     db_item.status = "approved"
     await db.commit()
     await db.refresh(db_item)
+
+    # Notification for SG
+    from app.models.notification import Notification
+    notif = Notification(
+        user_id=db_item.proposed_by,
+        exam_id=db_item.id,
+        message=f"Your proposed date for {db_item.discipline_id} has been approved.",
+    )
+    db.add(notif)
+    await db.commit()
     return db_item
 
 @router.post("/{exam_id}/reject", response_model=ExamRead)
@@ -213,6 +223,16 @@ async def reject_exam(
     db_item.status = "rejected"
     await db.commit()
     await db.refresh(db_item)
+
+    # Notification for SG
+    from app.models.notification import Notification
+    notif = Notification(
+        user_id=db_item.proposed_by,
+        exam_id=db_item.id,
+        message=f"Your proposed date for {db_item.discipline_id} was rejected. Please submit a new one.",
+    )
+    db.add(notif)
+    await db.commit()
     return db_item
 
 @router.delete("/{exam_id}", status_code=204)

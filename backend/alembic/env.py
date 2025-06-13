@@ -16,10 +16,13 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from app.models.exam import Exam
 from app.models.user import User
 from app.models.room import Room
 from app.models.discipline import Discipline
+from app.models.notification import Notification
 from app.db.base import Base
 
 target_metadata = Base.metadata
